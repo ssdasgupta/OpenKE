@@ -14,6 +14,7 @@ class BoxE(Model):
                 box_type='DeltaBoxTensor',
                 init_interval_center=0.5,
                 init_interval_delta=0.5,
+                softbox_temp=10,
                 margin = None,
                 epsilon = None):
 
@@ -23,7 +24,7 @@ class BoxE(Model):
         self.margin = margin
         self.epsilon = epsilon
         self.box_type = box_type
-        breakpoint()
+        self.softbox_temp = softbox_temp
         self.ent_embeddings = BoxEmbedding(self.ent_tot,
                                            self.dim,
                                            self.box_type,
@@ -65,10 +66,10 @@ class BoxE(Model):
 
     def _calc(self, head, tail, relation, mode):
 
-        if mode == 'head_batch':
-            tail.data = torch.cat(head.data.shape[-3]*[tail.data])
-        elif mode == 'tail_batch':
-            head.data = torch.cat(tail.data.shape[-3]*[head.data])
+        #if mode == 'head_batch':
+        #    tail.data = torch.cat(head.data.shape[-3]*[tail.data])
+        #elif mode == 'tail_batch':
+        #    head.data = torch.cat(tail.data.shape[-3]*[head.data])
 
         transformed_box = self.get_relation_transform(head, relation)
         head_tail_box_vol = transformed_box.intersection_log_soft_volume(
