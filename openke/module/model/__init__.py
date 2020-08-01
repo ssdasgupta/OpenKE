@@ -13,6 +13,7 @@ from .RESCAL import RESCAL
 from .Analogy import Analogy
 from .SimplE import SimplE
 from .RotatE import RotatE
+from .BoxE import BoxE
 
 __all__ = [
     'Model',
@@ -25,5 +26,6 @@ __all__ = [
     'RESCAL',
     'Analogy',
     'SimplE',
-    'RotatE'
+    'RotatE',
+    'BoxE'
 ]
