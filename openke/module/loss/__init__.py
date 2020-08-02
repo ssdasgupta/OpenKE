@@ -6,10 +6,12 @@ from .Loss import Loss
 from .MarginLoss import MarginLoss
 from .SoftplusLoss import SoftplusLoss
 from .SigmoidLoss import SigmoidLoss
+from .BCELoss import BCELoss
 
 __all__ = [
     'Loss',
     'MarginLoss',
     'SoftplusLoss',
     'SigmoidLoss',
+    'BCELoss'
 ]
