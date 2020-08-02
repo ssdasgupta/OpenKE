@@ -1,19 +1,19 @@
 import openke
 from openke.config import Trainer, Tester
 from openke.module.model import TransE, BoxE
-from openke.module.loss import SigmoidLoss
+from openke.module.loss import BCELoss
 from openke.module.strategy import NegativeSampling
 from openke.data import TrainDataLoader, TestDataLoader
 
 # dataloader for training
 train_dataloader = TrainDataLoader(
 	in_path = "./benchmarks/WN18RR/", 
-	batch_size = 2000,
+	batch_size = 20,
 	threads = 8,
 	sampling_mode = "cross", 
 	bern_flag = 0, 
 	filter_flag = 1, 
-	neg_ent = 64,
+	neg_ent = 10,
 	neg_rel = 0
 )
 
@@ -24,14 +24,14 @@ test_dataloader = TestDataLoader("./benchmarks/WN18RR/", "link")
 transe = BoxE(
 	ent_tot = train_dataloader.get_ent_tot(),
 	rel_tot = train_dataloader.get_rel_tot(),
-	dim = 1024, 
+	dim = 10, 
 	margin = 6.0)
 
 
 # define the loss function
 model = NegativeSampling(
 	model = transe, 
-	loss = SigmoidLoss(adv_temperature = 1),
+	loss = BCELoss(),
 	batch_size = train_dataloader.get_batch_size(), 
 	regul_rate = 0.0
 )
