@@ -57,27 +57,27 @@ class BoxE(Model):
         bias_delta = self.relation_delta_bias(relation)
         bias_min = self.relation_min_bias(relation)
         if len(box.data.shape) == 3:
-           box.data[:,0,:] = box.data[:,0,:].clone() * weight_min + bias_min
-           box.data[:,1,:] = nn.functional.softplus(box.data[:,1,:].clone() * weight_delta + bias_delta)
+            box.data[:,0,:] = box.data[:,0,:].clone() * weight_min + bias_min
+            box.data[:,1,:] = nn.functional.softplus(box.data[:,1,:].clone() * weight_delta + bias_delta)
         else:
-           box.data[:,:,0,:] = box.data[:,:,0,:].clone() * weight_min + bias_min
-           box.data[:,:,1,:] = nn.functional.softplus(box.data[:,:,1,:].clone() * weight_delta + bias_delta)
+            box.data[:,:,0,:] = box.data[:,:,0,:].clone() * weight_min + bias_min
+            box.data[:,:,1,:] = nn.functional.softplus(box.data[:,:,1,:].clone() * weight_delta + bias_delta)
         return box
 
     def _calc(self, head, tail, relation, mode):
-
-        #if mode == 'head_batch':
-        #    tail.data = torch.cat(head.data.shape[-3]*[tail.data])
-        #elif mode == 'tail_batch':
-        #    head.data = torch.cat(tail.data.shape[-3]*[head.data])
-
+        if mode == 'head_batch':
+            ratio = int(head.data.shape[-3] / tail.data.shape[-3])
+            tail.data = torch.cat(ratio * [tail.data])
+            relation = torch.cat(ratio * [relation])
+        elif mode == 'tail_batch':
+            ratio = int(tail.data.shape[-3] / head.data.shape[-3])
+            head.data = torch.cat(ratio * [head.data])
+            relation = torch.cat(ratio * [relation])
         transformed_box = self.get_relation_transform(head, relation)
         head_tail_box_vol = transformed_box.intersection_log_soft_volume(
             tail, temp=self.softbox_temp)
         score = head_tail_box_vol - tail.log_soft_volume(
-            temp=self.softbox_temp)
-
-        score = torch.sum(score, -1).flatten()
+           temp=self.softbox_temp)
         return score
     def forward(self, data):
         batch_h = data['batch_h']
