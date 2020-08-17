@@ -14,6 +14,7 @@ from .Analogy import Analogy
 from .SimplE import SimplE
 from .RotatE import RotatE
 from .BoxE import BoxE
+from .TransBox import TransIntersect
 
 __all__ = [
     'Model',
@@ -27,5 +28,6 @@ __all__ = [
     'Analogy',
     'SimplE',
     'RotatE',
-    'BoxE'
+    'BoxE',
+    'TransIntersect'
 ]
