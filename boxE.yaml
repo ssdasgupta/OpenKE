@@ -1,0 +1,25 @@
+name: OpenKE_testing
+program: train.py
+method: bayes
+metric:
+  name: validation_mrr
+  goal: maximize
+parameters:
+  alpha:
+    min: -7.6
+    max: 0
+    distribution: log_uniform
+  neg_ent:
+    min: 2
+    max: 100
+    distribution: int_uniform
+  dataset:
+    value: FB15K237
+  dim:
+    values: [50, 100, 200, 400, 600]
+  margin:
+    min: 0.1
+    max: 15
+    distribution: uniform
+  dataset:
+    value: FB15K237
