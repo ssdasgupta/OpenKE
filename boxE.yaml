@@ -1,5 +1,5 @@
 name: OpenKE_testing
-program: train.py
+program: train_translate.py
 method: bayes
 metric:
   name: validation_mrr
