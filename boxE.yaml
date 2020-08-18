@@ -1,4 +1,4 @@
-name: OpenKE_testing
+name: box_translate
 program: train_translate.py
 method: bayes
 metric:
