@@ -13,7 +13,7 @@ from .RESCAL import RESCAL
 from .Analogy import Analogy
 from .SimplE import SimplE
 from .RotatE import RotatE
-from .BoxE import BoxE
+from .BoxE import BoxE, BoxEHeadTail
 from .TransBox import TransIntersect
 
 __all__ = [
@@ -29,5 +29,6 @@ __all__ = [
     'SimplE',
     'RotatE',
     'BoxE',
-    'TransIntersect'
+    'TransIntersect',
+    'BoxEHeadTail'
 ]
