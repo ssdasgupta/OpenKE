@@ -1,6 +1,7 @@
 # coding:utf-8
 import torch
 import torch.nn as nn
+import wandb
 from torch.autograd import Variable
 import torch.optim as optim
 import os
@@ -13,6 +14,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 import copy
 from tqdm import tqdm
+
 
 class Tester(object):
 
@@ -88,6 +90,12 @@ class Tester(object):
         hit3 = self.lib.getTestLinkHit3(type_constrain)
         hit1 = self.lib.getTestLinkHit1(type_constrain)
         print (hit10)
+        wandb.log({'validation_mrr': mrr,
+                   'validation_mr': mr,
+                   'validation_hit10': hit10,
+                   'validation_hit3': hit3,
+                   'validation_hit1': hit1})
+        
         return mrr, mr, hit10, hit3, hit1
 
     def get_best_threshlod(self, score, ans):
