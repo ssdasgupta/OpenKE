@@ -32,7 +32,8 @@ box_translate = TransIntersect(
 	rel_tot = train_dataloader.get_rel_tot(),
 	dim = config.dim,
 	p_norm = 1, 
-	norm_flag = True)
+	norm_flag = True,
+	score_scheme = config.score_scheme)
 # define the loss function
 model = NegativeSampling(
 	model = box_translate, 

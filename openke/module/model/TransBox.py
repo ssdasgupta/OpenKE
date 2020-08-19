@@ -5,7 +5,15 @@ from .Model import Model
 
 class TransIntersect(Model):
 
-	def __init__(self, ent_tot, rel_tot, dim = 100, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
+	def __init__(self,
+		         ent_tot,
+		         rel_tot,
+		         dim = 100,
+		         p_norm = 1,
+		         norm_flag = True,
+		         score_scheme = 'conditional', #'intersection'
+		         margin = None,
+		         epsilon = None):
 		super(TransIntersect, self).__init__(ent_tot, rel_tot)
 		
 		self.dim = dim
@@ -16,14 +24,11 @@ class TransIntersect(Model):
 
 		self.ent_embeddings1 = nn.Embedding(self.ent_tot, self.dim)
 		self.ent_embeddings2 = nn.Embedding(self.ent_tot, self.dim)
-		self.rel_embeddings1 = nn.Embedding(self.rel_tot, self.dim)
-		self.rel_embeddings2 = nn.Embedding(self.rel_tot, self.dim)
+		self.get_relation_embeddings()
 
 		if margin == None or epsilon == None:
 			nn.init.xavier_uniform_(self.ent_embeddings1.weight.data)
 			nn.init.xavier_uniform_(self.ent_embeddings2.weight.data)
-			nn.init.xavier_uniform_(self.rel_embeddings1.weight.data)
-			nn.init.xavier_uniform_(self.rel_embeddings2.weight.data)
 		else:
 			self.embedding_range = nn.Parameter(
 				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
@@ -38,6 +43,24 @@ class TransIntersect(Model):
 				a = -self.embedding_range.item(), 
 				b = self.embedding_range.item()
 			)
+
+		if margin != None:
+			self.margin = nn.Parameter(torch.Tensor([margin]))
+			self.margin.requires_grad = False
+			self.margin_flag = True
+		else:
+			self.margin_flag = False
+
+	def get_relation_embeddings(self):
+		self.rel_embeddings1 = nn.Embedding(self.rel_tot, self.dim)
+		self.rel_embeddings2 = nn.Embedding(self.rel_tot, self.dim)
+		if margin == None or epsilon == None:
+			nn.init.xavier_uniform_(self.rel_embeddings1.weight.data)
+			nn.init.xavier_uniform_(self.rel_embeddings2.weight.data)
+		else:
+			self.embedding_range = nn.Parameter(
+				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
+			)
 			nn.init.uniform_(
 				tensor = self.rel_embeddings1.weight.data, 
 				a= -self.embedding_range.item(), 
@@ -48,14 +71,6 @@ class TransIntersect(Model):
 				a= -self.embedding_range.item(), 
 				b= self.embedding_range.item()
 			)
-
-		if margin != None:
-			self.margin = nn.Parameter(torch.Tensor([margin]))
-			self.margin.requires_grad = False
-			self.margin_flag = True
-		else:
-			self.margin_flag = False
-
 
 	def _calc(self, h1, h2, t1, t2, r1, r2, mode):
 		r2 = r1
@@ -104,7 +119,14 @@ class TransIntersect(Model):
 			join = torch.max(hr_max, t_max) - torch.min(hr_min, t_min)
 			marginal = hr_max - hr_min
 
-		score = torch.max(-meet, torch.zeros_like(meet)) # boundary distance
+		if score_scheme == 'conditional':
+			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)
+		elif score_scheme == 'intersection':
+			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0)
+		elif score_scheme == 'boundary_distance':
+			score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0)
+
+		#score = torch.max(-meet, torch.zeros_like(meet)) # boundary distance
 		#score = torch.nn.functional.softplus(-meet) # soft boundary distance
 		#score = -meet # boundary distance + intersection
 		#score = -torch.nn.functional.softplus(meet/1.0) * 1.0 # negative soft intersection similarity
