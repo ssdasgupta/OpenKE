@@ -32,7 +32,7 @@ print(config)
 # dataloader for training
 train_dataloader = TrainDataLoader(
 	in_path = "./benchmarks/" + config.dataset + "/", 
-	nbatches = 1000,
+	nbatches = 100,
 	threads = 8,
 	sampling_mode = "normal", 
 	bern_flag = 1, 
