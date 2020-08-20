@@ -57,7 +57,7 @@ class BCELoss(Loss):
 		return F.softmax(n_score * self.adv_temperature, dim = -1).detach()
 
 	def forward(self, p_score, n_score):
-		log_p = torch.cat([p_score, n_score.reshape(-1, 1)])
+		log_p = torch.cat([-p_score, -n_score.reshape(-1, 1)])
 		log1mp = log1mexp(log_p)
 		logits = torch.stack([log1mp, log_p], dim=-1).reshape(-1,2)
 		label = torch.cat([torch.ones_like(p_score, dtype=torch.long), 
