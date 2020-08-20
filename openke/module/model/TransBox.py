@@ -124,14 +124,13 @@ class TransIntersect(Model):
 			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)
 		elif self.score_scheme == 'intersection':
 			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0)
-			if torch.isnan(score).any():
-				import pdb; pdb.set_trace()
 		elif self.score_scheme == 'boundary_distance':
 			score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0)
 		else:
 			raise ValueError('Scoring scheme is not defined.')
 
-
+		if torch.isnan(score).any():
+			raise RuntimeError('The score is nan, please check if all the argument of the log are positive, all the parameters')
 		#score = torch.max(-meet, torch.zeros_like(meet)) # boundary distance
 		#score = torch.nn.functional.softplus(-meet) # soft boundary distance
 		#score = -meet # boundary distance + intersection
@@ -290,6 +289,8 @@ class AffineBox(TransIntersect):
 		#score = -torch.nn.functional.softplus(meet/1.0) * 1.0 + torch.nn.functional.softplus(join/1.0) * 1.0  # negative meet-join residual
 
 		score = torch.sum(score, -1).flatten()
+		if torch.isnan(score).any():
+			raise RuntimeError('The score is nan, please check if all the argument of the log are positive, all the parameters')
 
 		#score = -torch.prod(torch.nn.functional.softplus(meet/1.0) * 1.0, -1).flatten() # negative soft intersection volume
 		#score = -torch.prod(torch.nn.functional.softplus(meet/1.0) * 1.0 / torch.nn.functional.softplus(join/1.0) * 1.0, -1).flatten()
