@@ -22,7 +22,8 @@ config = {
 	'alpha': 0.01,
 	'use_gpu': False,
 	'epoch': 1,
-	'model': 'TransIntersect'
+	'model': 'TransIntersect',
+	'optimizer': 'adam'
 
 }
 run = wandb.init()
@@ -63,7 +64,8 @@ trainer = Trainer(model = model,
 	              data_loader = train_dataloader,
 	              train_times = config.epoch,
 	              alpha = config.alpha,
-	              use_gpu = True)
+	              use_gpu = True,
+	              opt_method = config.optimizer)
 trainer.run()
 box_translate.save_checkpoint(Path(run.dir)/'model.ckpt')
 
