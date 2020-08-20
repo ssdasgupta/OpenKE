@@ -10,7 +10,7 @@ class TransIntersect(Model):
 		         rel_tot,
 		         dim = 100,
 		         p_norm = 1,
-		         norm_flag = True,
+		         norm_flag = False,
 		         score_scheme = 'conditional', #'intersection'
 		         margin = None,
 		         epsilon = None):
@@ -228,22 +228,22 @@ class AffineBox(TransIntersect):
 	def _calc(self, h1, h2, t1, t2, r1, r2, r1_mult, r2_mult, mode):
 		r2 = r1
 		r2_mult = r1_mult
-		# if self.norm_flag:
-		# 	h_c = (h1 + h2)/2
-		# 	t_c = (t1 + t2)/2
-		# 	r_c = (r1 + r2)/2
-		# 	h_c_ = F.normalize(h_c, 2, -1)
-		# 	t_c_ = F.normalize(t_c, 2, -1)
-		# 	r_c_ = F.normalize(r_c, 2, -1)
-		# 	delta_h = h_c_ - h_c
-		# 	delta_t = t_c_ - t_c
-		# 	delta_r = r_c_ - r_c
-		# 	h1 = h1 + delta_h
-		# 	h2 = h2 + delta_h
-		# 	t1 = t1 + delta_t
-		# 	t2 = t2 + delta_t
-		# 	r1 = r1 + delta_r
-		# 	r2 = r2 + delta_r
+		if self.norm_flag:
+			h_c = (h1 + h2)/2
+			t_c = (t1 + t2)/2
+			r_c = (r1 + r2)/2
+			h_c_ = F.normalize(h_c, 2, -1)
+			t_c_ = F.normalize(t_c, 2, -1)
+			r_c_ = F.normalize(r_c, 2, -1)
+			delta_h = h_c_ - h_c
+			delta_t = t_c_ - t_c
+			delta_r = r_c_ - r_c
+			h1 = h1 + delta_h
+			h2 = h2 + delta_h
+			t1 = t1 + delta_t
+			t2 = t2 + delta_t
+			r1 = r1 + delta_r
+			r2 = r2 + delta_r
 
 		if mode != 'normal':
 			h1 = h1.view(-1, r1.shape[0], h1.shape[-1])
