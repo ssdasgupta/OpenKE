@@ -2,12 +2,29 @@ from pathlib import Path
 import openke
 from openke.config import Trainer, Tester
 from  openke.module.model import TransE
-from openke.module.model import TransIntersect
+from openke.module.model import TransIntersect, AffineBox
 from openke.module.loss import MarginLoss
 from openke.module.strategy import NegativeSampling
 from openke.data import TrainDataLoader, TestDataLoader
 
 import wandb
+model = {
+	'TransIntersect': TransIntersect,
+	'AffineBox': AffineBox
+}
+
+config = {
+	'dataset': 'FB15K237',
+	'neg_ent': 3,
+	'dim': 10,
+	'score_scheme': 'conditional',
+	'margin': 5.0,
+	'alpha': 0.01,
+	'use_gpu': False,
+	'epoch': 1,
+	'model': 'TransIntersect'
+
+}
 run = wandb.init()
 config = run.config
 print(config)
@@ -15,7 +32,7 @@ print(config)
 # dataloader for training
 train_dataloader = TrainDataLoader(
 	in_path = "./benchmarks/" + config.dataset + "/", 
-	nbatches = 100,
+	nbatches = 1000,
 	threads = 8,
 	sampling_mode = "normal", 
 	bern_flag = 1, 
@@ -27,7 +44,7 @@ train_dataloader = TrainDataLoader(
 test_dataloader = TestDataLoader("./benchmarks/" + config.dataset + "/", "link")
 
 # define the model
-box_translate = TransIntersect(
+box_translate = model[config.model](
 	ent_tot = train_dataloader.get_ent_tot(),
 	rel_tot = train_dataloader.get_rel_tot(),
 	dim = config.dim,
@@ -44,7 +61,7 @@ model = NegativeSampling(
 # train the model
 trainer = Trainer(model = model,
 	              data_loader = train_dataloader,
-	              train_times = 1000,
+	              train_times = config.epoch,
 	              alpha = config.alpha,
 	              use_gpu = True)
 trainer.run()

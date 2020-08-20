@@ -1,5 +1,5 @@
 name: box_affine
-program: train_boxE.py
+program: train_translate.py
 method: bayes
 metric:
   name: validation_mrr
@@ -9,10 +9,16 @@ parameters:
     min: -7.6
     max: 0
     distribution: log_uniform
+  model:
+    value: AffineBox
+    #value: TransIntersect
   neg_ent:
     min: 2
     max: 100
     distribution: int_uniform
+  score_scheme:
+    value: conditional
+    #value: intersection
   dataset:
     value: FB15K237
   dim:
@@ -35,3 +41,7 @@ parameters:
     distribution: uniform
   dataset:
     value: FB15K237
+  use_gpu:
+    value: True
+  epoch:
+    value: 500
