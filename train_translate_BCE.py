@@ -3,7 +3,7 @@ import openke
 from openke.config import Trainer, Tester
 from  openke.module.model import TransE
 from openke.module.model import TransIntersect, AffineBox
-from openke.module.loss import MarginLoss
+from openke.module.loss import MarginLoss, BCELoss
 from openke.module.strategy import NegativeSampling
 from openke.data import TrainDataLoader, TestDataLoader
 
@@ -55,7 +55,7 @@ box_translate = model[config.model](
 # define the loss function
 model = NegativeSampling(
 	model = box_translate, 
-	loss = MarginLoss(margin = config.margin),
+	loss = BCELoss(),
 	batch_size = train_dataloader.get_batch_size()
 )
 
