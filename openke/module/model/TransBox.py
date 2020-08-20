@@ -124,6 +124,8 @@ class TransIntersect(Model):
 			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)
 		elif self.score_scheme == 'intersection':
 			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0)
+			if torch.isnan(score).any():
+				import pdb; pdb.set_trace()
 		elif self.score_scheme == 'boundary_distance':
 			score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0)
 		else:
