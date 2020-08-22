@@ -72,6 +72,7 @@ void testHead(REAL *con, INT lastHead, bool type_constrain = false) {
         rig = head_rig[r];
     }
     REAL minimal = con[h];
+    INT ties = 0;
     INT l_s = 0;
     INT l_filter_s = 0;
     INT l_s_constrain = 0;
@@ -84,6 +85,10 @@ void testHead(REAL *con, INT lastHead, bool type_constrain = false) {
                 l_s += 1;
                 if (not _find(j, t, r))
                     l_filter_s += 1;
+            }
+            if (value == minimal) {
+                if (not _find(j, t, r))
+                    ties += 1;
             }
             if (type_constrain) {
                 while (lef < rig && head_type[lef] < j) lef ++;
@@ -98,6 +103,9 @@ void testHead(REAL *con, INT lastHead, bool type_constrain = false) {
             }
         }
     }
+
+    ties = ties / 2;
+    l_filter_s = l_filter_s + ties;
 
     if (l_filter_s < 10) l_filter_tot += 1;
     if (l_s < 10) l_tot += 1;
@@ -138,6 +146,7 @@ void testTail(REAL *con, INT lastTail, bool type_constrain = false) {
     }
     REAL minimal = con[t];
     INT r_s = 0;
+    INT ties = 0;
     INT r_filter_s = 0;
     INT r_s_constrain = 0;
     INT r_filter_s_constrain = 0;
@@ -148,6 +157,10 @@ void testTail(REAL *con, INT lastTail, bool type_constrain = false) {
                 r_s += 1;
                 if (not _find(h, j, r))
                     r_filter_s += 1;
+            }
+            if (value == minimal) {
+                if (not _find(h, j, r))
+                    ties += 1;
             }
             if (type_constrain) {
                 while (lef < rig && tail_type[lef] < j) lef ++;
@@ -163,6 +176,9 @@ void testTail(REAL *con, INT lastTail, bool type_constrain = false) {
         }
         
     }
+
+    ties = ties / 2;
+    r_filter_s = r_filter_s + ties;
 
     if (r_filter_s < 10) r_filter_tot += 1;
     if (r_s < 10) r_tot += 1;
