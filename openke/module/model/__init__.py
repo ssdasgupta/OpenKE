@@ -7,14 +7,13 @@ from .TransE import TransE
 from .TransD import TransD
 from .TransR import TransR
 from .TransH import TransH
+from .TransBox import TransBox
 from .DistMult import DistMult
 from .ComplEx import ComplEx
 from .RESCAL import RESCAL
 from .Analogy import Analogy
 from .SimplE import SimplE
 from .RotatE import RotatE
-from .BoxE import BoxE, BoxEHeadTail
-from .TransBox import TransIntersect, AffineBox
 
 __all__ = [
     'Model',
@@ -22,14 +21,12 @@ __all__ = [
     'TransD',
     'TransR',
     'TransH',
+    'TransBox',
     'DistMult',
     'ComplEx',
     'RESCAL',
     'Analogy',
     'SimplE',
     'RotatE',
-    'BoxE',
-    'TransIntersect',
-    'BoxEHeadTail',
-    'AffineBox'
+    'BoxEHeadTail'
 ]

@@ -3,47 +3,40 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .Model import Model
 
-class TransIntersect(Model):
+class TransBox(Model):
 
-	def __init__(self,
-		         ent_tot,
-		         rel_tot,
-		         dim = 100,
-		         p_norm = 1,
-		         norm_flag = False,
-		         score_scheme = 'conditional', #'intersection'
-		         margin = None,
-		         epsilon = None):
-		super(TransIntersect, self).__init__(ent_tot, rel_tot)
+	def __init__(self, ent_tot, rel_tot, dim = 100, p_norm = 1, norm_flag = True, margin = None, epsilon = None):
+		super(TransBox, self).__init__(ent_tot, rel_tot)
 		
 		self.dim = dim
 		self.margin = margin
 		self.epsilon = epsilon
 		self.norm_flag = norm_flag
 		self.p_norm = p_norm
-		self.score_scheme = score_scheme
 
-		self.ent_embeddings1 = nn.Embedding(self.ent_tot, self.dim)
-		self.ent_embeddings2 = nn.Embedding(self.ent_tot, self.dim)
-		self.get_relation_embeddings()
+		self.ent_embeddings = nn.Embedding(self.ent_tot, self.dim)
+		self.rel_embeddings = nn.Embedding(self.rel_tot, self.dim)
+		self.side_length = nn.Embedding(self.ent_tot, self.dim)
 
 		if margin == None or epsilon == None:
-			nn.init.xavier_uniform_(self.ent_embeddings1.weight.data)
-			nn.init.xavier_uniform_(self.ent_embeddings2.weight.data)
+			nn.init.xavier_uniform_(self.ent_embeddings.weight.data)
+			nn.init.xavier_uniform_(self.rel_embeddings.weight.data)
+			nn.init.xavier_uniform_(self.side_length.weight.data)
 		else:
 			self.embedding_range = nn.Parameter(
 				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
 			)
 			nn.init.uniform_(
-				tensor = self.ent_embeddings1.weight.data, 
+				tensor = self.ent_embeddings.weight.data, 
 				a = -self.embedding_range.item(), 
 				b = self.embedding_range.item()
 			)
 			nn.init.uniform_(
-				tensor = self.ent_embeddings2.weight.data, 
-				a = -self.embedding_range.item(), 
-				b = self.embedding_range.item()
+				tensor = self.rel_embeddings.weight.data, 
+				a= -self.embedding_range.item(), 
+				b= self.embedding_range.item()
 			)
+			nn.init.xavier_uniform_(self.side_length.weight.data)
 
 		if margin != None:
 			self.margin = nn.Parameter(torch.Tensor([margin]))
@@ -52,58 +45,23 @@ class TransIntersect(Model):
 		else:
 			self.margin_flag = False
 
-	def get_relation_embeddings(self):
-		self.rel_embeddings1 = nn.Embedding(self.rel_tot, self.dim)
-		self.rel_embeddings2 = nn.Embedding(self.rel_tot, self.dim)
-		if self.margin == None or self.epsilon == None:
-			nn.init.xavier_uniform_(self.rel_embeddings1.weight.data)
-			nn.init.xavier_uniform_(self.rel_embeddings2.weight.data)
-		else:
-			self.embedding_range = nn.Parameter(
-				torch.Tensor([(self.margin + self.epsilon) / self.dim]), requires_grad=False
-			)
-			nn.init.uniform_(
-				tensor = self.rel_embeddings1.weight.data, 
-				a= -self.embedding_range.item(), 
-				b= self.embedding_range.item()
-			)
-			nn.init.uniform_(
-				tensor = self.rel_embeddings2.weight.data, 
-				a= -self.embedding_range.item(), 
-				b= self.embedding_range.item()
-			)
 
-	def _calc(self, h1, h2, t1, t2, r1, r2, mode):
-		r2 = r1
+	def _calc(self, h, h_sl, t, t_sl, r, mode):
 		if self.norm_flag:
-			h_c = (h1 + h2)/2
-			t_c = (t1 + t2)/2
-			r_c = (r1 + r2)/2
-			h_c_ = F.normalize(h_c, 2, -1)
-			t_c_ = F.normalize(t_c, 2, -1)
-			r_c_ = F.normalize(r_c, 2, -1)
-			delta_h = h_c_ - h_c
-			delta_t = t_c_ - t_c
-			delta_r = r_c_ - r_c
-			h1 = h1 + delta_h
-			h2 = h2 + delta_h
-			t1 = t1 + delta_t
-			t2 = t2 + delta_t
-			r1 = r1 + delta_r
-			r2 = r2 + delta_r
+			h = F.normalize(h, 2, -1)
+			r = F.normalize(r, 2, -1)
+			t = F.normalize(t, 2, -1)
 
 		if mode != 'normal':
-			h1 = h1.view(-1, r1.shape[0], h1.shape[-1])
-			t1 = t1.view(-1, r1.shape[0], t1.shape[-1])
-			r1 = r1.view(-1, r1.shape[0], r1.shape[-1])
-			h2 = h2.view(-1, r2.shape[0], h2.shape[-1])
-			t2 = t2.view(-1, r2.shape[0], t2.shape[-1])
-			r2 = r2.view(-1, r2.shape[0], r2.shape[-1])
+			h = h.view(-1, r.shape[0], h.shape[-1])
+			t = t.view(-1, r.shape[0], t.shape[-1])
+			r = r.view(-1, r.shape[0], r.shape[-1])
+			h_sl = h_sl.view(-1, r.shape[0], h_sl.shape[-1])
+			t_sl = t_sl.view(-1, r.shape[0], t_sl.shape[-1])
 
-		h_min = torch.min(h1, h2)
-		h_max = torch.max(h1, h2)
-		t_min = torch.min(t1, t2)
-		t_max = torch.max(t1, t2)
+		h_min, h_max = torch.min(h, h + h_sl), torch.max(h, h + h_sl)
+		t_min, t_max = torch.min(t, t + t_sl), torch.max(t, t + t_sl)
+		r1, r2 = r, r
 
 		if mode == 'head_batch':
 			#score = h + (r - t)
@@ -120,27 +78,10 @@ class TransIntersect(Model):
 			join = torch.max(hr_max, t_max) - torch.min(hr_min, t_min)
 			marginal = hr_max - hr_min
 
-		if self.score_scheme == 'conditional':
-			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)
-		elif self.score_scheme == 'intersection':
-			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0)
-		elif self.score_scheme == 'boundary_distance':
-			score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0)
-		else:
-			raise ValueError('Scoring scheme is not defined.')
-
-		if torch.isnan(score).any():
-			raise RuntimeError('The score is nan, please check if all the argument of the log are positive, all the parameters')
-		#score = torch.max(-meet, torch.zeros_like(meet)) # boundary distance
-		#score = torch.nn.functional.softplus(-meet) # soft boundary distance
-		#score = -meet # boundary distance + intersection
+		score = torch.nn.functional.softplus(-meet) # soft boundary distance
 		#score = -torch.nn.functional.softplus(meet/1.0) * 1.0 # negative soft intersection similarity
-		#score = -torch.max(meet, torch.zeros_like(meet)) # negative intersection similarity
 		#score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) # negative log soft intersection volume
-		#score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0) # log soft boundary distance volume
-		#score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(join/1.0) * 1.0)  # negative log meet-join volume ratio
 		#score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)  # negative log conditional ratio
-		#score = -torch.nn.functional.softplus(meet/1.0) * 1.0 + torch.nn.functional.softplus(join/1.0) * 1.0  # negative meet-join residual
 
 		score = torch.sum(score, -1).flatten()
 
@@ -155,13 +96,12 @@ class TransIntersect(Model):
 		batch_t = data['batch_t']
 		batch_r = data['batch_r']
 		mode = data['mode']
-		h1 = self.ent_embeddings1(batch_h)
-		t1 = self.ent_embeddings1(batch_t)
-		r1 = self.rel_embeddings1(batch_r)
-		h2 = self.ent_embeddings2(batch_h)
-		t2 = self.ent_embeddings2(batch_t)
-		r2 = self.rel_embeddings2(batch_r)
-		score = self._calc(h1, h2, t1, t2, r1, r2, mode)
+		h = self.ent_embeddings(batch_h)
+		h_sl = self.side_length(batch_h)
+		t = self.ent_embeddings(batch_t)
+		t_sl = self.side_length(batch_t)
+		r = self.rel_embeddings(batch_r)
+		score = self._calc(h, h_sl, t, t_sl, r, mode)
 		if self.margin_flag:
 			return self.margin - score
 		else:
@@ -171,13 +111,10 @@ class TransIntersect(Model):
 		batch_h = data['batch_h']
 		batch_t = data['batch_t']
 		batch_r = data['batch_r']
-		h1 = self.ent_embeddings1(batch_h)
-		t1 = self.ent_embeddings1(batch_t)
-		r1 = self.rel_embeddings1(batch_r)
-		h2 = self.ent_embeddings2(batch_h)
-		t2 = self.ent_embeddings2(batch_t)
-		r2 = self.rel_embeddings2(batch_r)
-		regul = (torch.mean(h1 ** 2) + torch.mean(h2 ** 2) + torch.mean(t1 ** 2) + torch.mean(t2 ** 2) + torch.mean(r1 ** 2) + torch.mean(r2 ** 2)) / 6
+		h = self.ent_embeddings(batch_h)
+		t = self.ent_embeddings(batch_t)
+		r = self.rel_embeddings(batch_r)
+		regul = (torch.mean(h ** 2) + torch.mean(t ** 2) + torch.mean(r ** 2)) / 3
 		return regul
 
 	def predict(self, data):
@@ -187,115 +124,3 @@ class TransIntersect(Model):
 			return score.cpu().data.numpy()
 		else:
 			return score.cpu().data.numpy()
-
-
-class AffineBox(TransIntersect):
-	"""docstring for ClassName"""
-	def get_relation_embeddings(self):
-		
-		self.rel_embeddings_head = nn.Embedding(self.rel_tot, self.dim)
-		self.rel_embeddings_tail = nn.Embedding(self.rel_tot, self.dim)
-		self.rel_embeddings_head_mult = nn.Embedding(self.rel_tot, self.dim)
-		self.rel_embeddings_tail_mult = nn.Embedding(self.rel_tot, self.dim)
-		
-		nn.init.xavier_uniform_(self.rel_embeddings_head.weight.data)
-		nn.init.xavier_uniform_(self.rel_embeddings_tail.weight.data)
-		nn.init.xavier_uniform_(self.rel_embeddings_head_mult.weight.data)
-		nn.init.xavier_uniform_(self.rel_embeddings_tail_mult.weight.data)
-
-	def _calc(self, h1, h2, t1, t2, r_head, r_tail, r_head_mult, r_tail_mult, mode):
-		if self.norm_flag:
-			h_c = (h1 + h2)/2
-			t_c = (t1 + t2)/2
-			r_c = (r_head + r_tail)/2
-			h_c_ = F.normalize(h_c, 2, -1)
-			t_c_ = F.normalize(t_c, 2, -1)
-			r_c_ = F.normalize(r_c, 2, -1)
-			delta_h = h_c_ - h_c
-			delta_t = t_c_ - t_c
-			delta_r = r_c_ - r_c
-			h1 = h1 + delta_h
-			h2 = h2 + delta_h
-			t1 = t1 + delta_t
-			t2 = t2 + delta_t
-			r_head = r_head + delta_r
-			r_tail = r_tail + delta_r
-
-		if mode != 'normal':
-			h1 = h1.view(-1, r_head.shape[0], h1.shape[-1])
-			t1 = t1.view(-1, r_head.shape[0], t1.shape[-1])
-			r_head = r_head.view(-1, r_head.shape[0], r_head.shape[-1])
-			h2 = h2.view(-1, r_tail.shape[0], h2.shape[-1])
-			t2 = t2.view(-1, r_tail.shape[0], t2.shape[-1])
-			r_tail = r_tail.view(-1, r_tail.shape[0], r_tail.shape[-1])
-
-		h_min = torch.min(h1, h2)
-		h_max = torch.max(h1, h2)
-		t_min = torch.min(t1, t2)
-		t_max = torch.max(t1, t2)
-
-		transfer_head_min = h_min * r_head_mult + r_head
-		transfer_head_max = h_max * r_head_mult + r_head
-		hr_min = torch.min(transfer_head_min, transfer_head_max)
-		hr_max = torch.max(transfer_head_min, transfer_head_max)
-
-		transfer_tail_min = t_min * r_tail_mult + r_tail
-		transfer_tail_max = t_max * r_tail_mult + r_tail
-		tr_min = torch.min(transfer_tail_min, transfer_tail_max)
-		tr_max = torch.max(transfer_tail_min, transfer_tail_max)
-
-		meet = torch.min(hr_max, tr_max) - torch.max(hr_min, tr_min)
-		# join = torch.max(hr_max, t_max) - torch.min(hr_min, t_min)
-		marginal = tr_max - tr_min
-
-		if self.score_scheme == 'conditional':
-			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)
-		elif self.score_scheme == 'intersection':
-			score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0)
-		elif self.score_scheme == 'boundary_distance':
-			score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0)
-		else:
-			raise ValueError('Scoring scheme is not defined.')
-
-
-		#score = torch.max(-meet, torch.zeros_like(meet)) # boundary distance
-		#score = torch.nn.functional.softplus(-meet) # soft boundary distance
-		#score = -meet # boundary distance + intersection
-		#score = -torch.nn.functional.softplus(meet/1.0) * 1.0 # negative soft intersection similarity
-		#score = -torch.max(meet, torch.zeros_like(meet)) # negative intersection similarity
-		#score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) # negative log soft intersection volume
-		#score = torch.log(torch.nn.functional.softplus(-meet/1.0) * 1.0) # log soft boundary distance volume
-		#score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(join/1.0) * 1.0)  # negative log meet-join volume ratio
-		#score = -torch.log(torch.nn.functional.softplus(meet/1.0) * 1.0) + torch.log(torch.nn.functional.softplus(marginal/1.0) * 1.0)  # negative log conditional ratio
-		#score = -torch.nn.functional.softplus(meet/1.0) * 1.0 + torch.nn.functional.softplus(join/1.0) * 1.0  # negative meet-join residual
-
-		score = torch.sum(score, -1).flatten()
-		if torch.isnan(score).any():
-			raise RuntimeError('The score is nan, please check if all the argument of the log are positive, all the parameters')
-
-		#score = -torch.prod(torch.nn.functional.softplus(meet/1.0) * 1.0, -1).flatten() # negative soft intersection volume
-		#score = -torch.prod(torch.nn.functional.softplus(meet/1.0) * 1.0 / torch.nn.functional.softplus(join/1.0) * 1.0, -1).flatten()
-
-
-		return score
-
-	def forward(self, data):
-		batch_h = data['batch_h']
-		batch_t = data['batch_t']
-		batch_r = data['batch_r']
-		mode = data['mode']
-		h1 = self.ent_embeddings1(batch_h)
-		t1 = self.ent_embeddings1(batch_t)
-		r_head = self.rel_embeddings_head(batch_r)
-		r_head_mult = self.rel_embeddings_head_mult(batch_r)
-
-		h2 = self.ent_embeddings2(batch_h)
-		t2 = self.ent_embeddings2(batch_t)
-		r_tail = self.rel_embeddings_tail(batch_r)
-		r_tail_mult = self.rel_embeddings_tail_mult(batch_r)
-
-		score = self._calc(h1, h2, t1, t2, r_head, r_tail, r_head_mult, r_tail_mult, mode)
-		if self.margin_flag:
-			return self.margin - score
-		else:
-			return score
